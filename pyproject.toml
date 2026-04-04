@@ -1,0 +1,31 @@
+[build-system]
+requires      = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+[project]
+name            = "trace-score"
+version         = "0.1.0"
+description     = "Multi-turn LLM Conversation Consistency Metric"
+readme          = "README.md"
+license         = {file = "LICENSE"}
+requires-python = ">=3.8"
+authors         = [
+    {name = "Girinath V", email = "girinathv48@gmail.com"}
+]
+dependencies = [
+    "sentence-transformers>=2.2.0",
+    "numpy>=1.21.0",
+    "torch>=1.11.0",
+]
+keywords = [
+    "nlp", "llm", "evaluation",
+    "multi-turn", "consistency", "trace-score"
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+]
+[project.urls]
+Homepage   = "https://github.com/Giri530/trace-score"
+Repository = "https://github.com/Giri530/trace-score"
