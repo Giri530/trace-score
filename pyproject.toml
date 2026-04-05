@@ -1,6 +1,7 @@
 [build-system]
-requires      = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.backends.legacy:build"
+requires      = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name            = "trace-score"
 version         = "0.1.0"
@@ -9,7 +10,7 @@ readme          = "README.md"
 license         = {file = "LICENSE"}
 requires-python = ">=3.8"
 authors         = [
-    {name = "Girinath V", email = "girinathv48@gmail.com"}
+    {name = "Girinath V", email = "your-email@gmail.com"}
 ]
 dependencies = [
     "sentence-transformers>=2.2.0",
@@ -26,6 +27,7 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
 ]
+
 [project.urls]
 Homepage   = "https://github.com/Giri530/trace-score"
 Repository = "https://github.com/Giri530/trace-score"
