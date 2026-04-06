@@ -2,8 +2,28 @@
 
 **Multi-turn LLM Conversation Consistency Metric**
 
-> The first unified, deterministic, reference-free evaluation metric
-> for multi-turn conversational consistency in Large Language Models.
+> The first unified, deterministic, reference-free evaluation metric for
+> multi-turn conversational consistency in Large Language Models.
+
+[![PyPI version](https://badge.fury.io/py/trace-score.svg)](https://pypi.org/project/trace-score/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+
+---
+
+## The Problem
+
+Existing metrics (BLEU, ROUGE, BERTScore, RAGAS) evaluate each conversation
+turn **in isolation**. They cannot detect failures that only become visible
+**across multiple turns**:
+
+| Failure Type | Example | BLEU | ROUGE | BERTScore | TRACE |
+|---|---|---|---|---|---|
+| Fact forgotten | User says "I am diabetic" → model recommends sugar-rich food 5 turns later | Miss | Miss | Miss | **Catch** |
+| Correction ignored | User corrects model → model reverts to old behavior | Miss | Miss | Miss | **Catch** |
+| Self-contradiction | Model says X at turn 2, contradicts X at turn 7 | Miss | Miss | Miss | **Catch** |
+| Topic drift | Conversation gradually drifts off-topic | Miss | Miss | Miss | **Catch** |
+| Confidence drift | Model says "definitely" then "perhaps" about same claim | Miss | Miss | Miss | **Catch** |
 
 ---
 
@@ -13,27 +33,27 @@
 TRACE(C) = Σ(wᵢ · Sᵢ) − λ·P − δ·V + α·(T·C) + β·(A·R)
 ```
 
-Each component uses time-decay aggregation:
+Each component uses **time-decay aggregation** — recent turns weighted more:
 
 ```
 Sᵢ = (1/Z) · Σ γ^(N-t) · Sᵢ,ₜ
 Z  = Σ γ^(N-t)
 ```
 
-| Symbol | Component | Default |
+| Symbol | Component | Measures |
 |--------|-----------|---------|
-| T | Temporal Retention — did assistant remember user facts? | — |
-| R | Reliability Consistency — did assistant contradict itself? | — |
-| A | Adaptive Correction — did assistant retain user corrections? | — |
-| C | Context Coherence — did conversation stay on topic? | — |
-| E | Epistemic Stability — did confidence stay calibrated? | — |
-| P | Contradiction penalty | — |
-| V | Variance penalty | — |
-| γ | Time decay factor | 0.80 |
-| λ | Contradiction penalty weight | 0.15 |
-| δ | Variance penalty weight | 0.10 |
-| α | T·C interaction weight | 0.05 |
-| β | A·R interaction weight | 0.05 |
+| **T** | Temporal Retention | Did assistant remember user-stated facts? |
+| **R** | Reliability Consistency | Did assistant contradict itself? |
+| **A** | Adaptive Correction | Did assistant retain user corrections? |
+| **C** | Context Coherence | Did conversation stay on topic? |
+| **E** | Epistemic Stability | Did confidence stay calibrated? |
+| P | Contradiction penalty | Global contradiction rate |
+| V | Variance penalty | Confidence variance |
+| γ | Time decay factor | Default: 0.80 |
+| λ | Contradiction weight | Default: 0.15 |
+| δ | Variance weight | Default: 0.10 |
+| α | T·C interaction | Default: 0.05 |
+| β | A·R interaction | Default: 0.05 |
 
 ---
 
@@ -53,15 +73,17 @@ from trace_score import compute_TRACE
 conversation = [
     ("user",      "I am diabetic and hate spicy food"),
     ("assistant", "I will suggest low sugar mild options."),
-    ("user",      "Actually I eat fish too."),
-    ("assistant", "Spicy chicken with cashews!"),
+    ("user",      "Actually I eat fish too. I am pescatarian."),
+    ("assistant", "Spicy chicken with cashews!"),   # failure turn
 ]
 
 result = compute_TRACE(conversation, verbose=True)
 
-print(result["trace_score"])
-print(result["interpretation"])
-print(result["formula_breakdown"])
+print(result["trace_score"])        # 0.41 — catches failures
+print(result["T"])                  # 0.50 — forgot user facts
+print(result["A"])                  # 0.00 — ignored correction
+print(result["formula_breakdown"])  # full formula with values
+print(result["interpretation"])     # "Poor consistency"
 ```
 
 ---
@@ -71,7 +93,8 @@ print(result["formula_breakdown"])
 ```python
 from trace_score import TRACEEvaluator
 
-evaluator = TRACEEvaluator()   # models loaded once
+# Models loaded once, reused across all calls — much faster
+evaluator = TRACEEvaluator()
 results   = [evaluator.evaluate(conv) for conv in conversations]
 ```
 
@@ -83,7 +106,7 @@ results   = [evaluator.evaluate(conv) for conv in conversations]
 # Equal weights (default)
 result = compute_TRACE(conv, preset="equal")
 
-# Medical chatbot — reliability and memory matter more
+# Medical chatbot — memory and reliability weighted more
 result = compute_TRACE(conv, preset="medical_chatbot")
 
 # Custom weights — must sum to 1.0
@@ -98,89 +121,76 @@ Available presets: `equal`, `customer_service`, `technical_qa`,
 
 ---
 
-## Benchmark
+## Benchmark Results
 
-### Consistency Category Detection
+Evaluated on **30 multi-turn conversations** across 3 categories
+(Fact Memory, Correction Retention, Contradiction Detection).
+Conversations generated by **Llama-3.1-8B via Groq API**.
 
-TRACE evaluated on 3 synthetic conversation categories
-(8 turns each, equal weights, gamma=0.80):
+### Overall Metric Comparison
 
-| Category | TRACE | T | R | A | C | E |
-|----------|-------|---|---|---|---|---|
-| Perfect consistency | 0.91 | 1.00 | 1.00 | 1.00 | 0.78 | 0.89 |
-| Mixed consistency | 0.68 | 0.75 | 0.90 | 0.50 | 0.72 | 0.80 |
-| Poor consistency | 0.41 | 0.50 | 0.80 | 0.00 | 0.71 | 0.62 |
+| Metric | Overall | Fact Memory | Correction | Contradiction |
+|--------|---------|-------------|------------|---------------|
+| **TRACE** | **0.699** | **0.703** | **0.550** | **0.843** |
+| BLEU | 0.102 | 0.046 | 0.149 | 0.110 |
+| ROUGE-L | 0.239 | 0.177 | 0.301 | 0.239 |
+| BERTScore | 0.822 | 0.800 | 0.842 | 0.823 |
 
-TRACE correctly separates all three categories.
-Existing metrics (BLEU, ROUGE) score all three categories similarly
-because they evaluate each turn in isolation.
-
----
-
-### Gap Demonstrated — What Existing Metrics Miss
-
-Same failing conversation (corrections ignored, facts forgotten)
-evaluated by multiple metrics:
-
-| Metric | Score | Catches cross-turn failures? |
-|--------|-------|------------------------------|
-| BLEU (avg per-turn) | 0.82 | No — each turn looks fine |
-| ROUGE-L (avg per-turn) | 0.79 | No — lexical overlap seems ok |
-| BERTScore (avg per-turn) | 0.84 | No — semantic similarity per turn |
-| RAGAS Faithfulness | N/A | No — single query only |
-| **TRACE** | **0.41** | **Yes — cross-turn failures caught** |
-
-BLEU, ROUGE, and BERTScore assign high scores because they evaluate
-each turn individually without cross-turn awareness. TRACE evaluates
-the full conversation arc and catches forgotten facts, ignored
-corrections, self-contradictions, and confidence drift.
+**Key finding:** BLEU and ROUGE-L show similar low scores across all categories
+— they cannot distinguish between different types of consistency failures.
+BERTScore appears high but provides no diagnostic breakdown.
+**TRACE clearly separates Correction (0.550) from Contradiction (0.843)**,
+revealing that Llama-3.1-8B struggles most with retaining user corrections.
 
 ---
 
-### Component Breakdown — Failure Tracing
+### TRACE Component Breakdown by Category
 
-TRACE sub-scores pinpoint exactly which consistency dimension failed:
+| Category | T | R | A | C | E |
+|----------|---|---|---|---|---|
+| Fact Memory | 0.137 | 0.955 | **1.000** | 0.503 | 0.697 |
+| Correction | 0.491 | 0.927 | **0.144** | 0.465 | 0.712 |
+| Contradiction | **0.973** | 0.875 | 0.900 | 0.510 | 0.696 |
 
-```
-Conversation: User states diet restrictions → assistant ignores repeatedly
+**Diagnostic insight:**
 
-T = 0.50  ← forgot 2 of 4 user-stated facts
-R = 0.80  ← one self-contradiction detected
-A = 0.00  ← user correction completely ignored (critical failure)
-C = 0.71  ← conversation stayed on topic
-E = 0.62  ← confidence fluctuated across turns
+- Fact Memory: T=0.137 — model **forgets user-stated facts** (A=1.0 means
+  no corrections were needed, so A is vacuously true here)
+- Correction: A=0.144 — model **ignores user corrections** (critical failure)
+- Contradiction: T=0.973, A=0.900 — model handles these well
 
-TRACE = 0.41 → Poor consistency
-```
-
-BLEU gives one number with no breakdown.
-TRACE gives 5 actionable sub-scores — developers know exactly
-which dimension to fix in their model or pipeline.
+No existing metric (BLEU, ROUGE, BERTScore) can produce this breakdown.
 
 ---
 
-### Human Correlation Study (Planned — v1.0)
+### The Gap TRACE Reveals — BERTScore vs TRACE
 
-Full human evaluation study planned for v1.0 release:
+Conversations where **BERTScore is high but TRACE is low**
+(failures invisible to BERTScore, caught by TRACE):
 
-- 200 multi-turn conversations across 4 domains
-- 3 human annotators per conversation (Cohen's kappa > 0.70 target)
-- Pearson and Spearman correlation: TRACE vs human consistency ratings
-- Comparison against BLEU, BERTScore, G-Eval on same conversations
+| Conversation | Category | TRACE | BERTScore | Gap |
+|---|---|---|---|---|
+| CR_006 | Correction | 0.314 | 0.876 | +0.562 |
+| CR_009 | Correction | 0.381 | 0.861 | +0.480 |
+| CR_004 | Correction | 0.535 | 0.884 | +0.349 |
+| CR_003 | Correction | 0.494 | 0.864 | +0.370 |
+| CR_002 | Correction | 0.442 | 0.822 | +0.380 |
 
-*Results will be published alongside the arXiv paper.*
+**In all 5 cases:** BERTScore ≥ 0.82 (looks good), TRACE < 0.55 (failures detected).
+The A component reveals why — user corrections completely ignored (A=0.00).
+This is invisible to any per-turn metric.
 
 ---
 
 ## Why TRACE?
 
-| Metric | Multi-turn | Reference-free | Deterministic | Temporal |
-|--------|-----------|----------------|---------------|----------|
-| BLEU | No | No | Yes | No |
-| ROUGE | No | No | Yes | No |
-| BERTScore | No | No | Yes | No |
-| RAGAS | No | Yes | No | No |
-| **TRACE** | **Yes** | **Yes** | **Yes** | **Yes** |
+| Metric | Multi-turn | Reference-free | Deterministic | Time-decay | Diagnostic |
+|--------|-----------|----------------|---------------|-----------|-----------|
+| BLEU | No | No | Yes | No | No |
+| ROUGE | No | No | Yes | No | No |
+| BERTScore | No | No | Yes | No | No |
+| RAGAS | No | Yes | No | No | Partial |
+| **TRACE** | **Yes** | **Yes** | **Yes** | **Yes** | **Yes** |
 
 ---
 
@@ -188,8 +198,11 @@ Full human evaluation study planned for v1.0 release:
 
 | Model | Purpose | Size |
 |-------|---------|------|
-| all-MiniLM-L6-v2 | Semantic similarity (T, A, C, E) | 80MB |
-| cross-encoder/nli-deberta-v3-small | Contradiction detection (R, A) | 184MB |
+| `all-MiniLM-L6-v2` | Semantic similarity (T, A, C, E) | 80MB |
+| `cross-encoder/nli-deberta-v3-small` | Contradiction detection (R, A) | 184MB |
+
+Models downloaded automatically on first use (~264MB total).
+CPU-friendly — no GPU required.
 
 ---
 
@@ -200,7 +213,6 @@ Full human evaluation study planned for v1.0 release:
   title   = {TRACE: A Unified Deterministic Metric for Multi-turn
              Conversational Consistency in Large Language Models},
   author  = {Girinath, V},
-  journal = {arXiv preprint},
   year    = {2026}
 }
 ```
@@ -208,3 +220,4 @@ Full human evaluation study planned for v1.0 release:
 ---
 
 *Author: Girinath V*
+*GitHub: https://github.com/Giri530/trace-score*
