@@ -2,7 +2,7 @@
 
 **Multi-turn LLM Conversation Consistency Metric**
 
-> The first unified, deterministic, reference-free evaluation metric for
+> The unified, deterministic, reference-free evaluation metric for
 > multi-turn conversational consistency in Large Language Models.
 
 [![PyPI version](https://badge.fury.io/py/trace-score.svg)](https://pypi.org/project/trace-score/)
