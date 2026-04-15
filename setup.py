@@ -3,7 +3,7 @@ with open("README.md", "r", encoding="utf-8") as f:
     long_description = f.read()
 setup(
     name  = "trace-score",
-    version = "0.1.0",
+    version = "0.1.1",
     author  = "Girinath V",
     author_email  = "girinathv48@gmail.com",
     description   = "Multi-turn LLM Conversation Consistency Metric",
