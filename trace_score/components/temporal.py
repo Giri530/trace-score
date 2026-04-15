@@ -14,7 +14,7 @@ FACT_PATTERNS = [
      "user's {} is {}"),
 ]
 def extract_atomic_facts(text: str) -> List[str]:
-    facts      = []
+    facts = []
     text_lower = text.lower().strip()
     for pattern, template in FACT_PATTERNS:
         for match in re.findall(pattern, text_lower):
@@ -28,8 +28,8 @@ def extract_atomic_facts(text: str) -> List[str]:
 def compute_T(
     conversation : List[Tuple[str, str]],
     sbert_model  = None,
-    threshold    : float = 0.60,
-    gamma        : float = 0.80
+    threshold : float = 0.45,
+    gamma : float = 0.80
 ) -> Dict:
     if sbert_model is None:
         from sentence_transformers import SentenceTransformer
@@ -45,21 +45,21 @@ def compute_T(
         elif role == "assistant":
             assistant_turns.append({
                 "text":   text,
-                "facts":  list(cumulative_facts)  
+                "facts":  list(cumulative_facts) 
             })
     N = len(assistant_turns)
     if N == 0:
         return {
             "score": 1.0,
             "per_turn_scores": [],
-            "decay_weights":   [],
-            "user_facts":      cumulative_facts,
-            "explanation":     "No assistant turns found. T = 1.0."
+            "decay_weights": [],
+            "user_facts": cumulative_facts,
+            "explanation": "No assistant turns found. T = 1.0."
         }
     per_turn_scores = []
     for turn_data in assistant_turns:
         facts = turn_data["facts"]
-        text  = turn_data["text"]
+        text = turn_data["text"]
         if not facts:
             per_turn_scores.append(1.0)
             continue
@@ -73,19 +73,19 @@ def compute_T(
             convert_to_numpy=True,
             normalize_embeddings=True
         )
-        sims     = np.dot(fact_embs, turn_emb.T).flatten()
+        sims = np.dot(fact_embs, turn_emb.T).flatten()
         recalled = int(np.sum(sims >= threshold))
-        T_t      = recalled / len(facts)
+        T_t = recalled / len(facts)
         per_turn_scores.append(round(T_t, 4))
     decay_weights = [gamma ** (N - 1 - t) for t in range(N)]
     Z = sum(decay_weights)
     T_score = sum(w * s for w, s in zip(decay_weights, per_turn_scores)) / Z
     return {
-        "score":           round(T_score, 4),
+        "score": round(T_score, 4),
         "per_turn_scores": per_turn_scores,
-        "decay_weights":   [round(w, 4) for w in decay_weights],
-        "user_facts":      cumulative_facts,
-        "explanation":     (
+        "decay_weights": [round(w, 4) for w in decay_weights],
+        "user_facts": cumulative_facts,
+        "explanation": (
             f"Computed T across {N} assistant turns with gamma={gamma}. "
             f"Per-turn scores: {per_turn_scores}. "
             f"Decay weights: {[round(w,3) for w in decay_weights]}. "
