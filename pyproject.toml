@@ -1,10 +1,9 @@
 [build-system]
 requires      = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
-
 [project]
 name            = "trace-score"
-version         = "0.1.0"
+version         = "0.1.1"
 description     = "Multi-turn LLM Conversation Consistency Metric"
 readme          = "README.md"
 license         = {file = "LICENSE"}
