@@ -1,15 +1,15 @@
 from typing import List, Tuple, Dict, Optional
-from .components.temporal    import compute_T
+from .components.temporal import compute_T
 from .components.reliability import compute_R
-from .components.adaptive    import compute_A
-from .components.coherence   import compute_C
-from .components.epistemic   import compute_E
+from .components.adaptive import compute_A
+from .components.coherence import compute_C
+from .components.epistemic import compute_E
 WEIGHT_PRESETS = {
-    "equal":            {"w_T": 0.20, "w_R": 0.20, "w_A": 0.20, "w_C": 0.20, "w_E": 0.20},
+    "equal": {"w_T": 0.20, "w_R": 0.20, "w_A": 0.20, "w_C": 0.20, "w_E": 0.20},
     "customer_service": {"w_T": 0.30, "w_R": 0.20, "w_A": 0.30, "w_C": 0.10, "w_E": 0.10},
-    "technical_qa":     {"w_T": 0.20, "w_R": 0.30, "w_A": 0.10, "w_C": 0.10, "w_E": 0.30},
-    "medical_chatbot":  {"w_T": 0.30, "w_R": 0.30, "w_A": 0.20, "w_C": 0.10, "w_E": 0.10},
-    "education_tutor":  {"w_T": 0.20, "w_R": 0.10, "w_A": 0.30, "w_C": 0.30, "w_E": 0.10},
+    "technical_qa": {"w_T": 0.20, "w_R": 0.30, "w_A": 0.10, "w_C": 0.10, "w_E": 0.30},
+    "medical_chatbot": {"w_T": 0.30, "w_R": 0.30, "w_A": 0.20, "w_C": 0.10, "w_E": 0.10},
+    "education_tutor": {"w_T": 0.20, "w_R": 0.10, "w_A": 0.30, "w_C": 0.30, "w_E": 0.10},
 }
 INTERPRETATION_THRESHOLDS = [
     (0.85, "Excellent — conversation is highly consistent"),
@@ -35,14 +35,14 @@ class TRACEEvaluator:
     def evaluate(
         self,
         conversation : List[Tuple[str, str]],
-        weights      : Optional[Dict[str, float]] = None,
-        preset       : str   = "equal",
-        gamma        : float = 0.80,
-        lambda_      : float = 0.15,
-        delta        : float = 0.10,
-        alpha        : float = 0.05,
-        beta         : float = 0.05,
-        verbose      : bool  = False
+        weights : Optional[Dict[str, float]] = None,
+        preset : str = "equal",
+        gamma : float = 0.80,
+        lambda_ : float = 0.15,
+        delta : float = 0.10,
+        alpha : float = 0.05,
+        beta : float = 0.05,
+        verbose : bool  = False
     ) -> Dict:
         self._load_models()
         if not conversation:
@@ -86,22 +86,22 @@ class TRACEEvaluator:
             f" = {raw_trace:.4f} → clamped → {trace_score:.4f}"
         )
         result = {
-            "trace_score":       trace_score,
-            "base_score":        round(base_score, 4),
-            "penalty_term":      round(penalty_term, 4),
-            "interaction_term":  round(interaction_term, 4),
+            "trace_score": trace_score,
+            "base_score": round(base_score, 4),
+            "penalty_term": round(penalty_term, 4),
+            "interaction_term": round(interaction_term, 4),
             "T": T, "R": R, "A": A, "C": C, "E": E,
             "P": P, "V": V,
-            "weights":           w,
-            "preset":            preset if weights is None else "custom",
-            "gamma":             gamma,
-            "lambda":            lambda_,
-            "delta":             delta,
-            "alpha":             alpha,
-            "beta":              beta,
-            "interpretation":    self._interpret(trace_score),
+            "weights": w,
+            "preset": preset if weights is None else "custom",
+            "gamma": gamma,
+            "lambda": lambda_,
+            "delta": delta,
+            "alpha": alpha,
+            "beta": beta,
+            "interpretation": self._interpret(trace_score),
             "formula_breakdown": formula_breakdown,
-            "num_turns":         len(conversation),
+            "num_turns": len(conversation),
         }
         if verbose:
             result["details"] = {
@@ -143,14 +143,14 @@ class TRACEEvaluator:
         }
 def compute_TRACE(
     conversation : List[Tuple[str, str]],
-    weights      : Optional[Dict[str, float]] = None,
-    preset       : str   = "equal",
-    gamma        : float = 0.80,
-    lambda_      : float = 0.15,
-    delta        : float = 0.10,
-    alpha        : float = 0.05,
-    beta         : float = 0.05,
-    verbose      : bool  = False
+    weights : Optional[Dict[str, float]] = None,
+    preset : str = "equal",
+    gamma : float = 0.80,
+    lambda_ : float = 0.15,
+    delta : float = 0.10,
+    alpha : float = 0.05,
+    beta : float = 0.05,
+    verbose : bool  = False
 ) -> Dict:
     evaluator = TRACEEvaluator()
     return evaluator.evaluate(
